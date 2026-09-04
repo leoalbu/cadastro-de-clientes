@@ -1,0 +1,22 @@
+# Segredos / ambiente
+.env
+.env.local
+
+# Compilacao Java
+bin/
+*.class
+
+# Artefatos de build (caso adote Maven/Gradle no futuro)
+target/
+build/
+.gradle/
+
+# Editores / SO
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Claude Code (config local da máquina)
+.claude/settings.local.json
