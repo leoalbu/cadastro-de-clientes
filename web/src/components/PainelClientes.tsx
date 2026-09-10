@@ -6,7 +6,7 @@ import { diasAteVencimento, situacaoFinanceira } from "@/lib/situacao";
 import { dataBR, moeda } from "@/lib/formato";
 import { formatarDoc } from "@/lib/validacao";
 import { Badge } from "./Badge";
-import { IconeLapis, IconeLixeira, IconeReciclar } from "./Icones";
+import { IconeIA, IconeLapis, IconeLixeira, IconeReciclar } from "./Icones";
 
 const LABEL_SITUACAO = {
   EM_DIA: "Em dia",
@@ -24,6 +24,7 @@ export function PainelClientes({
   onEditar,
   onExcluir,
   onAlternarStatus,
+  onCobranca,
 }: {
   clientes: Cliente[];
   selecionadoId: number | null;
@@ -33,6 +34,7 @@ export function PainelClientes({
   onEditar: () => void;
   onExcluir: () => void;
   onAlternarStatus: () => void;
+  onCobranca: () => void;
 }) {
   const selecionado = clientes.find((c) => c.id === selecionadoId) ?? null;
 
@@ -148,6 +150,12 @@ export function PainelClientes({
             desabilitado={!selecionado || processando}
             onClick={onAlternarStatus}
             fantasma
+          />
+          <BotaoAcao
+            icone={<IconeIA className="h-4 w-4 text-acento" />}
+            texto="Cobrança (IA)"
+            desabilitado={!selecionado || selecionado.valorAReceber <= 0 || processando}
+            onClick={onCobranca}
           />
         </div>
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import {
   alternarStatusCliente,
+  buscarClientePorId,
   DadosCliente,
   excluirCliente,
   existeCpfCnpj,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/clientes";
 import { docValido, emailValido } from "@/lib/validacao";
 import { Cliente } from "@/lib/tipos";
+import { CanalCobranca, gerarTextoCobranca, TomCobranca } from "@/lib/cobranca";
 
 export interface ResultadoAcao {
   ok: boolean;
@@ -78,5 +80,32 @@ export async function alternarStatusAction(
     return { ok: true };
   } catch (e) {
     return { ok: false, erros: [(e as Error).message] };
+  }
+}
+
+export interface ResultadoCobranca {
+  ok: boolean;
+  texto?: string;
+  erro?: string;
+}
+
+/** Gera, via IA (OpenRouter), um texto de cobrança para o cliente. */
+export async function gerarCobrancaAction(
+  clienteId: number,
+  tom: TomCobranca,
+  canal: CanalCobranca
+): Promise<ResultadoCobranca> {
+  try {
+    const cliente = await buscarClientePorId(clienteId);
+    if (!cliente) {
+      return { ok: false, erro: "Cliente não encontrado." };
+    }
+    if (cliente.valorAReceber <= 0) {
+      return { ok: false, erro: "Este cliente não tem valor a receber." };
+    }
+    const texto = await gerarTextoCobranca(cliente, tom, canal);
+    return { ok: true, texto };
+  } catch (e) {
+    return { ok: false, erro: (e as Error).message };
   }
 }

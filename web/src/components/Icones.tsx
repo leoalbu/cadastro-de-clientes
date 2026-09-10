@@ -88,3 +88,37 @@ export function IconeAlerta({ className }: Props) {
     </svg>
   );
 }
+
+export function IconeMensagem({ className }: Props) {
+  return (
+    <svg className={className} {...base}>
+      <path d="M21 12a8 8 0 0 1-11.5 7.2L4 20l1-4.6A8 8 0 1 1 21 12Z" />
+    </svg>
+  );
+}
+
+export function IconeIA({ className }: Props) {
+  return (
+    <svg className={className} {...base}>
+      <path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8Z" />
+      <path d="M18.5 15.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7Z" />
+    </svg>
+  );
+}
+
+export function IconeCopiar({ className }: Props) {
+  return (
+    <svg className={className} {...base}>
+      <rect x="9" y="9" width="11" height="11" rx="2" />
+      <path d="M5 15V5a2 2 0 0 1 2-2h8" />
+    </svg>
+  );
+}
+
+export function IconeCheck({ className }: Props) {
+  return (
+    <svg className={className} {...base}>
+      <path d="M5 13l4 4L19 7" />
+    </svg>
+  );
+}

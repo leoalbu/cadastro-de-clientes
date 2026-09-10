@@ -8,12 +8,14 @@ import { Cabecalho } from "./Cabecalho";
 import { Filtros } from "./Filtros";
 import { PainelClientes } from "./PainelClientes";
 import { ModalCliente } from "./ModalCliente";
+import { ModalCobranca } from "./ModalCobranca";
 import { ErroConexao } from "./ErroConexao";
 
 export function PaginaCliente({ clientes, erro }: { clientes: Cliente[]; erro: string | null }) {
   const router = useRouter();
   const [selecionadoId, setSelecionadoId] = useState<number | null>(null);
   const [modal, setModal] = useState<"fechado" | "novo" | "editar">("fechado");
+  const [cobrancaAberta, setCobrancaAberta] = useState(false);
   const [processando, setProcessando] = useState(false);
 
   const selecionado = clientes.find((c) => c.id === selecionadoId) ?? null;
@@ -71,6 +73,7 @@ export function PaginaCliente({ clientes, erro }: { clientes: Cliente[]; erro: s
           onEditar={() => setModal("editar")}
           onExcluir={excluir}
           onAlternarStatus={alternarStatus}
+          onCobranca={() => setCobrancaAberta(true)}
         />
       )}
 
@@ -83,6 +86,10 @@ export function PaginaCliente({ clientes, erro }: { clientes: Cliente[]; erro: s
             atualizar();
           }}
         />
+      )}
+
+      {cobrancaAberta && selecionado && (
+        <ModalCobranca cliente={selecionado} aoFechar={() => setCobrancaAberta(false)} />
       )}
     </div>
   );
