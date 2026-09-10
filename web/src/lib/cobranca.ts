@@ -13,9 +13,23 @@ const DESCRICAO_TOM: Record<TomCobranca, string> = {
 };
 
 const DESCRICAO_CANAL: Record<CanalCobranca, string> = {
-  whatsapp: "mensagem de WhatsApp: curta (2 a 4 frases), pode usar 1 emoji discreto, sem assunto",
-  email: "e-mail: comece com uma linha 'Assunto: ...', depois saudação, corpo e assinatura genérica",
+  whatsapp:
+    "mensagem de WhatsApp: curta (2 a 4 frases), pode usar 1 emoji discreto, sem linha de assunto e sem assinatura",
+  email:
+    "e-mail: primeira linha 'Assunto: ...', depois saudação, corpo e encerre apenas com 'Atenciosamente,' — sem nome, empresa, telefone ou qualquer assinatura",
 };
+
+/** Remove placeholders entre colchetes e assinaturas vazias que o modelo às vezes inventa. */
+function limparTexto(texto: string): string {
+  return texto
+    .split(/\r?\n/)
+    .filter((linha) => !/^\s*\[[^\]]*\]\s*$/.test(linha)) // linha que é só "[Algo]"
+    .join("\n")
+    .replace(/\[[^\]]*\]/g, "") // colchetes restantes no meio de frases
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 /** Monta o prompt e chama a IA para gerar o texto de cobrança de um cliente. */
 export async function gerarTextoCobranca(
@@ -43,8 +57,10 @@ export async function gerarTextoCobranca(
 
   const system = [
     "Você escreve mensagens de cobrança em português do Brasil para uma pequena empresa.",
-    "Escreva apenas o texto final da mensagem, pronto para enviar, sem comentários seus, sem aspas e sem placeholders entre colchetes.",
-    "Não invente valores, datas, formas de pagamento, links ou dados que não foram fornecidos.",
+    "Escreva apenas o texto final da mensagem, pronto para enviar, sem comentários seus e sem aspas.",
+    "NUNCA use colchetes nem placeholders como [Seu Nome], [Empresa], [Telefone].",
+    "Não invente valores, datas, formas de pagamento, links, nomes de pessoas ou de empresa que não foram fornecidos.",
+    "Não escreva bloco de assinatura com dados de contato; no máximo termine com 'Atenciosamente,'.",
     "Use o primeiro nome do cliente na saudação quando fizer sentido.",
     "Seja respeitoso: o objetivo é receber o pagamento preservando o relacionamento.",
   ].join(" ");
@@ -58,5 +74,6 @@ export async function gerarTextoCobranca(
     "Peça de forma clara a regularização e ofereça abertura para conversar em caso de dúvida.",
   ].join("\n");
 
-  return chamarIA({ system, user, temperatura: 0.7, maxTokens: 400 });
+  const texto = await chamarIA({ system, user, temperatura: 0.7, maxTokens: 400 });
+  return limparTexto(texto);
 }

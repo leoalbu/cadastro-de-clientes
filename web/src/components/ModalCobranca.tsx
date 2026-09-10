@@ -6,7 +6,7 @@ import { Cliente } from "@/lib/tipos";
 import { CanalCobranca, TomCobranca } from "@/lib/cobranca";
 import { moeda } from "@/lib/formato";
 import { situacaoFinanceira } from "@/lib/situacao";
-import { IconeCheck, IconeCopiar, IconeIA, IconeX } from "./Icones";
+import { IconeCheck, IconeCopiar, IconeIA, IconeMensagem, IconeX } from "./Icones";
 import { Badge } from "./Badge";
 
 const TONS: { valor: TomCobranca; rotulo: string }[] = [
@@ -20,10 +20,36 @@ const CANAIS: { valor: CanalCobranca; rotulo: string }[] = [
   { valor: "email", rotulo: "E-mail" },
 ];
 
+/** DDI + DDD + número, só dígitos. Prepara para o wa.me. */
+function paraWhatsApp(telefone: string): string {
+  const d = telefone.replace(/\D/g, "");
+  if (d.length === 10 || d.length === 11) return "55" + d; // sem código do país
+  return d; // já tem DDI ou formato incomum
+}
+
+/** Separa "Assunto: ..." da primeira linha, se existir. */
+function separarAssunto(texto: string, nome: string): { assunto: string; corpo: string } {
+  const m = texto.match(/^\s*assunto:\s*(.+?)\s*\r?\n+([\s\S]*)$/i);
+  if (m) return { assunto: m[1].trim(), corpo: m[2].trim() };
+  return { assunto: `Cobrança - ${nome}`, corpo: texto.trim() };
+}
+
+function abrirLink(url: string) {
+  const a = document.createElement("a");
+  a.href = url;
+  a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
 export function ModalCobranca({ cliente, aoFechar }: { cliente: Cliente; aoFechar: () => void }) {
   const [tom, setTom] = useState<TomCobranca>("neutro");
   const [canal, setCanal] = useState<CanalCobranca>("whatsapp");
   const [texto, setTexto] = useState("");
+  const [canalGerado, setCanalGerado] = useState<CanalCobranca | null>(null);
+  const [destino, setDestino] = useState("");
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -41,6 +67,8 @@ export function ModalCobranca({ cliente, aoFechar }: { cliente: Cliente; aoFecha
       return;
     }
     setTexto(r.texto ?? "");
+    setCanalGerado(canal);
+    setDestino(canal === "whatsapp" ? cliente.telefone ?? "" : cliente.email ?? "");
   }
 
   async function copiar() {
@@ -52,6 +80,32 @@ export function ModalCobranca({ cliente, aoFechar }: { cliente: Cliente; aoFecha
       setErro("Não foi possível copiar. Selecione o texto e copie manualmente.");
     }
   }
+
+  function enviar() {
+    if (!destino.trim()) {
+      setErro(
+        canal === "whatsapp"
+          ? "Informe o telefone com DDD para enviar no WhatsApp."
+          : "Informe o e-mail do cliente para enviar."
+      );
+      return;
+    }
+    setErro(null);
+    if (canal === "whatsapp") {
+      const numero = paraWhatsApp(destino);
+      abrirLink(`https://wa.me/${numero}?text=${encodeURIComponent(texto)}`);
+    } else {
+      const { assunto, corpo } = separarAssunto(texto, cliente.nome);
+      abrirLink(
+        `mailto:${destino.trim()}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(
+          corpo
+        )}`
+      );
+    }
+  }
+
+  const podeEnviar = texto.length > 0;
+  const canalMudou = canalGerado !== null && canalGerado !== canal;
 
   return (
     <div
@@ -110,10 +164,30 @@ export function ModalCobranca({ cliente, aoFechar }: { cliente: Cliente; aoFecha
             }
             className="w-full rounded-lg border border-borda-forte px-3 py-2 text-sm leading-relaxed outline-none focus:border-acento focus:ring-1 focus:ring-acento"
           />
-          {texto && (
-            <p className="text-xs text-tinta-fraca">
-              Revise o texto antes de enviar — a IA pode errar. Você pode editar direto aqui.
-            </p>
+
+          {podeEnviar && (
+            <div className="space-y-2">
+              <label className="flex flex-col gap-1 text-sm">
+                <span className="text-tinta-suave">
+                  {canal === "whatsapp" ? "Telefone (com DDD)" : "E-mail do cliente"}
+                </span>
+                <input
+                  value={destino}
+                  onChange={(e) => setDestino(e.target.value)}
+                  placeholder={canal === "whatsapp" ? "(11) 98888-1111" : "cliente@email.com"}
+                  className="w-full rounded-lg border border-borda-forte px-3 py-2 text-sm outline-none focus:border-acento focus:ring-1 focus:ring-acento"
+                />
+              </label>
+              {canalMudou && (
+                <p className="text-xs text-proximo">
+                  O texto foi gerado para {canalGerado === "whatsapp" ? "WhatsApp" : "e-mail"}. Clique em
+                  &ldquo;Gerar novamente&rdquo; para o formato de {canal === "whatsapp" ? "WhatsApp" : "e-mail"}.
+                </p>
+              )}
+              <p className="text-xs text-tinta-fraca">
+                Revise antes de enviar — a IA pode errar. O botão abre o {canal === "whatsapp" ? "WhatsApp" : "seu app de e-mail"} com a mensagem já preenchida.
+              </p>
+            </div>
           )}
         </div>
 
@@ -126,22 +200,32 @@ export function ModalCobranca({ cliente, aoFechar }: { cliente: Cliente; aoFecha
             <IconeX className="h-3.5 w-3.5" />
             Fechar
           </button>
-          <div className="flex gap-2">
-            {texto && (
-              <button
-                type="button"
-                onClick={copiar}
-                className="flex items-center gap-1.5 rounded-lg border border-borda-forte px-4 py-2 text-sm font-semibold text-tinta hover:bg-superficie-2"
-              >
-                {copiado ? <IconeCheck className="h-4 w-4 text-acento" /> : <IconeCopiar className="h-4 w-4" />}
-                {copiado ? "Copiado" : "Copiar"}
-              </button>
+          <div className="flex flex-wrap gap-2">
+            {podeEnviar && (
+              <>
+                <button
+                  type="button"
+                  onClick={copiar}
+                  className="flex items-center gap-1.5 rounded-lg border border-borda-forte px-3 py-2 text-sm font-semibold text-tinta hover:bg-superficie-2"
+                >
+                  {copiado ? <IconeCheck className="h-4 w-4 text-acento" /> : <IconeCopiar className="h-4 w-4" />}
+                  {copiado ? "Copiado" : "Copiar"}
+                </button>
+                <button
+                  type="button"
+                  onClick={enviar}
+                  className="flex items-center gap-1.5 rounded-lg bg-acento px-4 py-2 text-sm font-semibold text-white hover:bg-acento-hover"
+                >
+                  <IconeMensagem className="h-4 w-4" />
+                  {canal === "whatsapp" ? "Enviar no WhatsApp" : "Enviar por e-mail"}
+                </button>
+              </>
             )}
             <button
               type="button"
               onClick={gerar}
               disabled={carregando}
-              className="flex items-center gap-1.5 rounded-lg bg-acento px-5 py-2 text-sm font-semibold text-white hover:bg-acento-hover disabled:opacity-60"
+              className="flex items-center gap-1.5 rounded-lg border border-acento px-4 py-2 text-sm font-semibold text-acento hover:bg-acento-suave disabled:opacity-60"
             >
               <IconeIA className="h-4 w-4" />
               {carregando ? "Gerando…" : texto ? "Gerar novamente" : "Gerar mensagem"}
